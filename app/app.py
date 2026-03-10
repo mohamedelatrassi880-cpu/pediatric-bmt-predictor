@@ -9,7 +9,7 @@ import plotly.graph_objects as go
 # =========================
 # PAGE CONFIG
 # =========================
-st.title("Pediatric BMT Success Predictor")
+st.title("P>ROJECT INFO , TUTEUR: RYM NASSIH")
 st.set_page_config(
     page_title="Pediatric BMT Success Predictor",
     page_icon="🩺",
