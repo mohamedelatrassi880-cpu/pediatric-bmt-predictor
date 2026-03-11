@@ -1,29 +1,35 @@
 import pandas as pd
+import numpy as np
+from pandas.api.types import is_numeric_dtype
 
-def optimize_memory_v2(df):
+def optimize_memory(df):
     """
-    Optimise l'utilisation de la mémoire d'un DataFrame en utilisant 
-    les fonctionnalités intégrées de Pandas (pd.to_numeric).
+    Optimizes memory usage of a pandas DataFrame by downcasting numeric types.
     """
-    # memory_usage(deep=True) est plus précis s'il y a des chaînes de caractères
-    start_mem = df.memory_usage(deep=True).sum() / 1024**2
+    start_mem = df.memory_usage().sum() / 1024**2
+    # Using .4f because this medical dataset is small, so we want to see the exact decimals
     print(f'Memory usage before optimization: {start_mem:.4f} MB')
 
-    # 1. Sélectionner et réduire les colonnes entières (int)
-    int_cols = df.select_dtypes(include=['int8', 'int16', 'int32', 'int64']).columns
-    for col in int_cols:
-        df[col] = pd.to_numeric(df[col], downcast='integer')
+    for col in df.columns:
+        # STRICT CHECK: Only process this column if it is actually a number
+        if is_numeric_dtype(df[col]):
+            col_type = df[col].dtype
+            c_min = df[col].min()
+            c_max = df[col].max()
+            
+            if str(col_type)[:3] == 'int':
+                if c_min > np.iinfo(np.int8).min and c_max < np.iinfo(np.int8).max:
+                    df[col] = df[col].astype(np.int8)
+                elif c_min > np.iinfo(np.int16).min and c_max < np.iinfo(np.int16).max:
+                    df[col] = df[col].astype(np.int16)
+                elif c_min > np.iinfo(np.int32).min and c_max < np.iinfo(np.int32).max:
+                    df[col] = df[col].astype(np.int32)
+            else:
+                if c_min > np.finfo(np.float32).min and c_max < np.finfo(np.float32).max:
+                    df[col] = df[col].astype(np.float32)
 
-    # 2. Sélectionner et réduire les colonnes décimales (float)
-    float_cols = df.select_dtypes(include=['float16', 'float32', 'float64']).columns
-    for col in float_cols:
-        df[col] = pd.to_numeric(df[col], downcast='float')
-
-    end_mem = df.memory_usage(deep=True).sum() / 1024**2
+    end_mem = df.memory_usage().sum() / 1024**2
     print(f'Memory usage after optimization: {end_mem:.4f} MB')
-    
-    # Gestion de la division par zéro au cas où le DataFrame serait vide
-    if start_mem > 0:
-        print(f'Decreased by {100 * (start_mem - end_mem) / start_mem:.1f}%')
+    print(f'Decreased by {100 * (start_mem - end_mem) / start_mem:.1f}%')
     
     return df
