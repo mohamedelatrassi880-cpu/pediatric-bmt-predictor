@@ -1,4 +1,5 @@
 import pandas as pd
+import joblib
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.svm import SVC
@@ -81,7 +82,9 @@ if __name__ == "__main__":
                 df[col] = df[col].fillna(df[col].median())
             else:
                 df[col] = df[col].fillna(df[col].mode()[0])
-                
+        print("\n--- Data Cleanliness Report ---")
+        print(f"Total missing values remaining: {df.isnull().sum().sum()}")
+        print("-------------------------------\n")        
         # Run One-Hot Encoding
         df_encoded = pd.get_dummies(df, drop_first=True, dtype=int)
         
@@ -89,7 +92,16 @@ if __name__ == "__main__":
         if 'survival_time' in df_encoded.columns:
             df_encoded = df_encoded.drop('survival_time', axis=1)
             
-        # Train the models!
-        train_and_evaluate(df_encoded)
+        # Train the models and capture the outputs!
+        trained_models, evaluation_results = train_and_evaluate(df_encoded)
+        
+        # Save the Random Forest model for Streamlit to use
+        joblib.dump(trained_models["Random Forest"], "app/rf_model.pkl")
+        print("Success! Model saved to app/rf_model.pkl")
+        # --- NEW: Save the columns for Streamlit ---
+        # Get the exact columns used for training (excluding the target 'survival_status')
+        model_columns = [col for col in df_encoded.columns if col != 'survival_status']
+        joblib.dump(model_columns, "app/model_columns.pkl")
+        print("Success! Columns saved to app/model_columns.pkl")
     else:
         print(f"Error: Could not find dataset at {data_path}. Please check the path.")
