@@ -23,3 +23,30 @@ def test_optimize_memory():
     # 3. Assert (Verify) that it worked
     assert end_mem < start_mem, "Memory was not reduced!"
     assert df_optimized['test_col'].dtype == np.float32, "Column was not downcasted to float32!"
+
+def test_optimize_memory_multiple_types():
+    """Satisfies: Run multiple tests"""
+    # Test that the function correctly handles a mix of text and numbers without crashing
+    df = pd.DataFrame({
+        'text_col': ['A', 'B', 'C'],
+        'int_col': [1, 2, 3]
+    })
+    df['int_col'] = df['int_col'].astype(np.int64)
+    
+    optimized_df = optimize_memory(df)
+    
+    # Text should remain untouched, int64 should be compressed to int8 or int32
+    assert optimized_df['text_col'].dtype == object
+    assert optimized_df['int_col'].dtype != np.int64
+
+def test_optimize_memory_extremes():
+    """Satisfies: Add new extremes test"""
+    # Test how the system handles extreme outliers (massive numbers)
+    # 1e100 is so large it cannot be safely downcasted to a smaller float type
+    df = pd.DataFrame({'extreme_col': [1e100, -1e100, 0.0]})
+    df['extreme_col'] = df['extreme_col'].astype(np.float64)
+    
+    optimized_df = optimize_memory(df)
+    
+    # The function should recognize the extreme values and safely leave it as float64
+    assert optimized_df['extreme_col'].dtype == np.float64
